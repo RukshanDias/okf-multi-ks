@@ -1,0 +1,107 @@
+# Stages the okf-multi-ks npm bootstrapper (installer/) on a version tag.
+#
+# Release flow:
+#   1. bump "version" in installer/package.json
+#   2. commit it to master
+#   3. git tag installer-v<that same version> && git push origin installer-v<...>
+#   4. approve the staged package on npmjs.com (or `npm stage approve`) with 2FA
+#
+# The tag must match package.json exactly — the job fails loudly rather than
+# staging a version you did not mean to ship. Auth is npm Trusted Publishing
+# (OIDC) with stage-only permission: the job runs `npm stage publish`, never
+# `npm publish`. A maintainer must then approve the stage with 2FA.
+name: Publish installer
+
+on:
+  push:
+    tags:
+      - 'installer-v*'
+  # Dry run only: verifies and packs, never stages.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Trusted Publishing; do not remove
+    defaults:
+      run:
+        working-directory: installer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Staged publishing needs npm >= 11.15.0; runners can lag behind.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Show versions
+        run: node --version && npm --version
+
+      - name: Check tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#installer-v}"
+          echo "package.json=$pkg  tag=$tag"
+          if [ "$pkg" != "$tag" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $pkg"
+            exit 1
+          fi
+
+      - name: Refuse to republish an existing version
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          name=$(node -p "require('./package.json').name")
+          if npm view "$name@$pkg" version >/dev/null 2>&1; then
+            echo "::error::$name@$pkg is already on the registry; bump the version"
+            exit 1
+          fi
+          echo "$name@$pkg is unpublished — ok to proceed"
+
+      - name: Syntax-check every shipped file
+        run: |
+          for f in bin/*.js lib/*.js; do
+            node --check "$f" && echo "ok: $f"
+          done
+
+      # The bootstrapper's whole job is to hand over to install.sh, so a
+      # syntax error there breaks the package even though it ships separately.
+      - name: Syntax-check install.sh
+        working-directory: .
+        run: |
+          bash -n install.sh && echo "ok: install.sh"
+
+      - name: Smoke test the CLI
+        run: |
+          got=$(node bin/okf-multi-ks.js --version)
+          want=$(node -p "require('./package.json').version")
+          [ "$got" = "$want" ] || { echo "::error::--version printed '$got', expected '$want'"; exit 1; }
+          node bin/okf-multi-ks.js --help > /dev/null
+          echo "--version and --help both ok"
+
+      - name: Verify the package has no runtime dependencies
+        run: |
+          deps=$(node -p "Object.keys(require('./package.json').dependencies || {}).length")
+          [ "$deps" = "0" ] || { echo "::error::expected zero dependencies, found $deps"; exit 1; }
+          echo "zero dependencies confirmed"
+
+      - name: Show tarball contents
+        run: npm pack --dry-run
+
+      - name: Stage publish to npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npm stage publish
+
+      - name: Dry run notice
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: echo "Manual run — verified and packed, nothing staged. Push an installer-v* tag to stage a release."

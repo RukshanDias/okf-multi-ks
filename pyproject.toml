@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reference-agent"
+version = "0.1.0"
+description = "Reference agent that produces Open Knowledge Format bundles"
+requires-python = ">=3.11"
+dependencies = [
+    "google-adk>=2.0",
+    "google-cloud-bigquery>=3.20",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "markdownify>=0.11",
+    "websockets>=13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+reference-agent = "reference_agent.cli:main"
+okf = "okf.cli:main"
+
+# Windows-only benefit: pip generates this against the windowed (pythonw)
+# stub, so the desktop shortcut can launch `serve` with no console flash.
+# Identical to `okf` everywhere else (no console/GUI subsystem split off Windows).
+[project.gui-scripts]
+okf-gui = "okf.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+reference_agent = ["prompts/*.md", "viewer/templates/*.html", "viewer/static/*"]
+okf = ["viewer/templates/*.html", "viewer/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

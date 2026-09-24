@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OKF Bundle Viewer</title>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<!-- 3D View mode; three pin matches the r151 bundled in 3d-force-graph (ADR-0007) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.151.3/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.71.4/dist/3d-force-graph.min.js"></script>
+<style>
+/*__VIZ_CSS__*/
+</style>
+</head>
+<body>
+<header>
+  <div class="title">
+    <strong id="bundle-name"></strong>
+    <span class="muted">Multi-KS notebook</span>
+  </div>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search title / id / tag">
+    <select id="filter-ks">
+      <option value="">All knowledge systems</option>
+    </select>
+    <select id="filter-type">
+      <option value="">All types</option>
+    </select>
+    <select id="view-mode">
+      <option value="2d">2D</option>
+      <option value="3d">3D</option>
+    </select>
+    <select id="layout">
+      <option value="cose">cose (force)</option>
+      <option value="concentric">concentric</option>
+      <option value="breadthfirst">breadth-first</option>
+      <option value="circle">circle</option>
+      <option value="grid">grid</option>
+    </select>
+    <button id="reset">Reset view</button>
+    <button id="actions" type="button" hidden>Actions</button>
+    <button id="chat-toggle" type="button" hidden>Chat</button>
+  </div>
+</header>
+
+<dialog id="actions-dialog">
+  <strong>Actions</strong>
+  <div class="actions-group">Re-generate</div>
+  <div class="actions-row">
+    <code id="actions-cmd"></code>
+    <button type="button" id="actions-copy">Copy</button>
+    <button type="button" id="actions-regenerate-live" hidden>Regenerate now</button>
+  </div>
+  <div class="actions-group">Serve (chat, live actions)</div>
+  <div class="actions-row">
+    <code id="actions-chat-cmd"></code>
+    <button type="button" id="actions-chat-copy">Copy</button>
+  </div>
+  <!--__OKF_OFFBOARD_ROWS__-->
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+
+<main>
+  <section id="graph">
+    <div id="graph-2d" hidden></div>
+    <div id="graph-3d" hidden></div>
+  </section>
+  <section id="detail">
+    <div id="detail-empty" class="muted">Click a node to see its details.</div>
+    <article id="detail-content" hidden>
+      <header class="detail-header">
+        <span class="type-chip" id="detail-type"></span>
+        <h1 id="detail-title"></h1>
+        <div class="muted" id="detail-id"></div>
+      </header>
+      <dl class="frontmatter">
+        <dt>Description</dt><dd id="detail-description"></dd>
+        <dt>Resource</dt><dd id="detail-resource"></dd>
+        <dt>Tags</dt><dd id="detail-tags"></dd>
+      </dl>
+      <hr>
+      <div id="detail-body"></div>
+      <section id="detail-projected" hidden>
+        <h2>Cross-KS relationships</h2>
+        <p class="muted">Projected from Association store — not in source markdown.</p>
+        <ul id="projected-list"></ul>
+      </section>
+      <section id="detail-backlinks" hidden>
+        <h2>Cited by</h2>
+        <ul id="backlinks-list"></ul>
+      </section>
+    </article>
+  </section>
+  <aside id="chat-panel" hidden>
+    <div id="chat-resizer" title="Drag to resize"></div>
+    <header class="chat-header">
+      <strong>Notebook chat</strong>
+      <span class="muted" id="chat-status">connecting…</span>
+    </header>
+    <div id="chat-messages"></div>
+    <form id="chat-form">
+      <div class="chat-tools">
+        <div id="chat-chip" class="chat-chip" hidden>
+          <span id="chat-chip-label"></span>
+          <button type="button" id="chat-chip-remove" title="Drop concept context">×</button>
+        </div>
+        <select id="chat-skill" title="Skill to invoke with each message">
+          <option value="okf-reader">okf-reader</option>
+          <option value="okf-ingest">okf-ingest</option>
+          <option value="okf-onboard">okf-onboard</option>
+        </select>
+      </div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" rows="2" placeholder="Ask about your notebook…" disabled></textarea>
+        <button type="submit" id="chat-send" disabled>Send</button>
+        <button type="button" id="chat-cancel" hidden>Stop</button>
+      </div>
+    </form>
+  </aside>
+</main>
+
+<script>
+window.BUNDLE_NAME = __BUNDLE_NAME__;
+window.BUNDLE = __BUNDLE_DATA__;
+</script>
+<script>
+/*__VIZ_JS__*/
+</script>
+</body>
+</html>

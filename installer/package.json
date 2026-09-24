@@ -1,0 +1,28 @@
+{
+  "name": "okf-multi-ks",
+  "version": "0.1.2",
+  "description": "Bootstrapper for the OKF Multi-KS system: preflights prerequisites, clones the repo, and runs install.sh.",
+  "bin": {
+    "okf-multi-ks": "bin/okf-multi-ks.js"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "keywords": [
+    "okf",
+    "open-knowledge-format",
+    "installer"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RukshanDias/okf-multi-ks.git",
+    "directory": "installer"
+  }
+}
