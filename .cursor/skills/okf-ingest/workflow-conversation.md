@@ -6,10 +6,11 @@ Use when the user says things like: *"add what we discussed about git to OKF"* �
 - [ ] Confirm topic scope, KS root, concept type/location
 - [ ] Review conversation for the relevant content only
 - [ ] Discover Intra-KS peers via that KS's index.md
-- [ ] Cursor: write curated body to temp file (Intra-KS See also only)
+- [ ] Cursor: write curated body to ~/.okf/temp/<concept-id>.md (Intra-KS See also only)
 - [ ] Run ingest_okf_concept.py --body-file … (no --url)  # mints id
 - [ ] For Cross-KS peers: okf associate … --source ingest
 - [ ] Run okf check
+- [ ] Delete the temp body file (only after check passes and the concept is in the right KS)
 ```
 
 ## Persist
@@ -22,7 +23,7 @@ Use when the user says things like: *"add what we discussed about git to OKF"* �
   --concept-id git-workflow-notes \
   --description "Summarizes git practices discussed in conversation." \
   --tag git \
-  --body-file path/to/body.md
+  --body-file ~/.okf/temp/git-workflow-notes.md
 ```
 
 ## Example
@@ -32,4 +33,5 @@ Use when the user says things like: *"add what we discussed about git to OKF"* �
 → --out <ks_library>/personal, concept-id: git-workflow-notes
 → okf associate … --source ingest  (only if Cross-KS peers agreed)
 → okf check
+→ delete ~/.okf/temp/git-workflow-notes.md
 ```

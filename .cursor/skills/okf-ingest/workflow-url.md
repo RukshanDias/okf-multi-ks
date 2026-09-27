@@ -4,12 +4,13 @@ Use when the knowledge source is a web page, blog, or guide (user provides a URL
 
 ```
 - [ ] Confirm URL, KS root, concept type/location
-- [ ] Fetch via fetch_url (Python)
+- [ ] Fetch via fetch_url (Python) or supported MCP tool
 - [ ] Discover Intra-KS peers via that KS's index.md
-- [ ] Cursor: write curated body to temp file (Intra-KS See also only)
+- [ ] Cursor: write curated body to ~/.okf/temp/<concept-id>.md (Intra-KS See also only)
 - [ ] Run ingest_okf_concept.py --url … --body-file …  # mints id
 - [ ] For Cross-KS peers: okf associate … --source ingest
 - [ ] Run okf check
+- [ ] Delete the temp body file (only after check passes and the concept is in the right KS)
 ```
 
 ## Fetch
@@ -34,7 +35,7 @@ print(p.markdown[:8000])
   --concept-id my-slug \
   --description "One sentence summary." \
   --tag topic-tag \
-  --body-file path/to/body.md
+  --body-file ~/.okf/temp/my-slug.md
 ```
 
 ## Example
@@ -44,4 +45,5 @@ print(p.markdown[:8000])
 → --out <ks_library>/work, concept-id: example-guide
 → okf associate … --source ingest  (only if Cross-KS peers agreed)
 → okf check
+→ delete ~/.okf/temp/example-guide.md
 ```

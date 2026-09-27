@@ -82,4 +82,5 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
         root=workspace_root,
         brains=brains,
         link_search_order=[str(x) for x in search_order],
+        ks_base=ks_base,
     )

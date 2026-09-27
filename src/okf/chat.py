@@ -21,6 +21,7 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+from okf.config import load_workspace_config
 from okf.offboard import execute_offboard, plan_offboard
 from okf.store import index_dir
 from okf.viewer import generate_workspace_visualization
@@ -399,7 +400,9 @@ class OKFServer:
                 continue  # stray non-protocol output; don't kill the relay
             self._log_event(msg)
             if msg.get("method") == "session/request_permission" and "id" in msg:
-                outcome = route_permission(msg.get("params") or {})
+                outcome = route_permission(
+                    msg.get("params") or {}, write_roots(self._cwd)
+                )
                 if outcome is not None:
                     await self._send_agent(
                         proc,
@@ -410,11 +413,48 @@ class OKFServer:
                 await self._client.send(text)
 
 
-# Write gate (grill 2026-09-05): reads flow, raw file mutations are never
-# sanctioned (Separation rule risk), everything else — incl. `okf associate`
-# executes — goes to the human as an approve/deny card.
+# Write gate (grill 2026-09-05): reads flow, deletes/moves are never
+# sanctioned (Separation rule risk), edits inside the notebook / KS library /
+# registered KSs flow (ingest + onboard write there), everything else — incl.
+# outside edits and `okf associate` executes — goes to the human as an
+# approve/deny card.
 _AUTO_ALLOW_KINDS = {"read", "search", "fetch"}
-_AUTO_DENY_KINDS = {"edit", "delete", "move"}
+_AUTO_DENY_KINDS = {"delete", "move"}
+# Agent settings (self-granted allow rules skip this gate entirely) and git
+# internals (hooks run code) always go to the human, even inside a root.
+_GUARDED_DIRS = {".claude", ".git"}
+
+
+def write_roots(workspace_root: Path) -> list[Path]:
+    """Dirs where agent edits skip the card: the notebook, its KS library,
+    and every registered KS (absolute KS paths may live elsewhere). Re-read
+    per request: onboarding changes okf.yaml mid-session."""
+    roots = [Path(workspace_root).resolve()]
+    try:
+        cfg = load_workspace_config(workspace_root)
+    except Exception:  # broken/missing okf.yaml: notebook only, card covers the rest
+        return roots
+    if cfg.ks_base is not None:
+        roots.append(cfg.ks_base)
+    roots += [b.path for b in cfg.brains.values()]
+    return roots
+
+
+def _edits_inside(locations: list | None, roots: list[Path]) -> bool:
+    """True when every edited path is absolute, under a root, and outside
+    _GUARDED_DIRS. No locations -> False (unknown target goes to the human)."""
+    paths = [loc.get("path") for loc in locations or [] if isinstance(loc, dict)]
+    if not paths:
+        return False
+    for raw in paths:
+        if not raw or not Path(raw).is_absolute():
+            return False
+        path = Path(raw).resolve()
+        if _GUARDED_DIRS & {p.lower() for p in path.parts}:
+            return False
+        if not any(path.is_relative_to(root) for root in roots):
+            return False
+    return True
 
 
 def _pick_option(options: list[dict], prefix: str) -> str | None:
@@ -424,12 +464,16 @@ def _pick_option(options: list[dict], prefix: str) -> str | None:
     return None
 
 
-def route_permission(params: dict) -> dict | None:
+def route_permission(params: dict, roots: list[Path] | None = None) -> dict | None:
     """Auto-response outcome for an ACP session/request_permission, or None
-    to forward the request to the human in the chat panel."""
-    kind = (params.get("toolCall") or {}).get("kind")
+    to forward the request to the human in the chat panel. `roots`: see
+    write_roots(); None -> every edit goes to the human."""
+    tool_call = params.get("toolCall") or {}
+    kind = tool_call.get("kind")
     options = params.get("options") or []
-    if kind in _AUTO_ALLOW_KINDS:
+    if kind in _AUTO_ALLOW_KINDS or (
+        kind == "edit" and _edits_inside(tool_call.get("locations"), roots or [])
+    ):
         option_id = _pick_option(options, "allow")
     elif kind in _AUTO_DENY_KINDS:
         option_id = _pick_option(options, "reject")

@@ -28,6 +28,7 @@ class WorkspaceConfig:
     root: Path
     brains: dict[str, BrainConfig]  # labeled Knowledge Systems
     link_search_order: list[str]  # unused by Separation resolver; kept for yaml compat
+    ks_base: Path | None = None  # KS library (or root when unset); KS paths resolve here
 
 
 @dataclass

@@ -9,7 +9,7 @@ import sys
 import pytest
 
 import okf.chat as chat_mod
-from okf.chat import OKFServer, resolve_agent, route_permission
+from okf.chat import OKFServer, resolve_agent, route_permission, write_roots
 from okf.cli import main
 
 
@@ -147,23 +147,55 @@ def test_route_permission_auto_allows_reads():
         }
 
 
-def test_route_permission_auto_denies_raw_edits():
-    for kind in ("edit", "delete", "move"):
+def test_route_permission_auto_denies_deletes_and_moves():
+    for kind in ("delete", "move"):
         assert route_permission(_perm_request(kind)) == {
             "outcome": "selected",
             "optionId": "no",
         }
 
 
-def test_route_permission_forwards_executes_to_human():
-    # `okf associate` / ingest arrive as execute tool calls: human decides.
-    assert route_permission(_perm_request("execute")) is None
-    assert route_permission(_perm_request("other")) is None
+def test_route_permission_forwards_executes_and_edits_to_human():
+    # `okf associate` / ingest arrive as execute tool calls; ingest/onboard
+    # write temp + config files via edits: human decides.
+    for kind in ("execute", "edit", "other"):
+        assert route_permission(_perm_request(kind)) is None
+
+
+def test_route_permission_auto_allows_edits_inside_write_roots(tmp_path):
+    lib = tmp_path / "library"
+    (lib / "kairos").mkdir(parents=True)
+    (tmp_path / "okf.yaml").write_text(
+        "version: 1\nks_library: library\nks:\n  kairos:\n    path: kairos\n",
+        encoding="utf-8",
+    )
+    roots = write_roots(tmp_path)
+    allowed = {"outcome": "selected", "optionId": "yes"}
+
+    def edit(*paths):
+        req = _perm_request("edit")
+        req["toolCall"]["locations"] = [{"path": str(p)} for p in paths]
+        return route_permission(req, roots)
+
+    assert edit(tmp_path / "tmp" / "body.md") == allowed  # notebook
+    assert edit(lib / "new-clone" / "x.md") == allowed  # KS library, not yet onboarded
+    assert edit(lib / "kairos" / "a.md", tmp_path / "okf.yaml") == allowed
+    # Outside, mixed, guarded, relative, or unknown target -> card.
+    assert edit(tmp_path.parent / "elsewhere.md") is None
+    assert edit(lib / "kairos" / "a.md", tmp_path.parent / "elsewhere.md") is None
+    assert edit(tmp_path / ".claude" / "settings.local.json") is None
+    assert edit(lib / "kairos" / ".git" / "hooks" / "pre-commit") is None
+    assert edit("tmp/body.md") is None
+    assert route_permission(_perm_request("edit"), roots) is None
+
+
+def test_write_roots_falls_back_to_notebook_without_config(tmp_path):
+    assert write_roots(tmp_path) == [tmp_path.resolve()]
 
 
 def test_route_permission_forwards_when_no_matching_option():
     only_allow = [{"optionId": "yes", "name": "Allow", "kind": "allow_once"}]
-    assert route_permission(_perm_request("edit", options=only_allow)) is None
+    assert route_permission(_perm_request("delete", options=only_allow)) is None
 
 
 # A stand-in ACP agent speaking newline-delimited JSON-RPC on stdio:

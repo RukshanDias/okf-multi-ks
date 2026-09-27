@@ -58,6 +58,10 @@
   let agentEl = null;
   const toolEls = new Map();
 
+  // Shell tools put the raw command in `title` and a model-written summary in
+  // rawInput.description ("Remove the temp file"); show the summary.
+  const describe = (tc) => (tc && tc.rawInput && tc.rawInput.description) || "";
+
   function setStatus(text) { statusEl.textContent = text; }
   function jsonSend(obj) { ws.send(JSON.stringify(obj)); }
   function request(method, params) {
@@ -156,7 +160,7 @@
         el = addMsg("tool");
         toolEls.set(u.toolCallId, el);
       }
-      const title = u.title || el.dataset.title || "tool";
+      const title = describe(u) || u.title || el.dataset.title || "tool";
       el.dataset.title = title;
       el.textContent = `⚙ ${title}${u.status ? ` — ${u.status}` : ""}`;
       // A tool call ends the current message bubble; the next chunk starts fresh.
@@ -168,11 +172,13 @@
   // Write gate, human side: the bridge only forwards what a human must decide.
   function onPermission(msg) {
     const card = addMsg("perm");
-    const title =
-      (msg.params.toolCall && msg.params.toolCall.title) || "The agent asks for permission";
+    const command = msg.params.toolCall && msg.params.toolCall.title;
+    const title = describe(msg.params.toolCall) || command || "The agent asks for permission";
     const label = document.createElement("div");
     label.textContent = title;
     card.appendChild(label);
+    // The human approves what runs, not the summary: keep the command visible.
+    if (command && command !== title) card.appendChild(document.createElement("code")).textContent = command;
     for (const opt of msg.params.options || []) {
       const btn = document.createElement("button");
       btn.type = "button";

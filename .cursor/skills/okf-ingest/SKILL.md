@@ -86,7 +86,11 @@ Load **only** the matching workflow reference after you know the source type.
 
 ## Body standards (both workflows)
 
-Write **body only** to `--body-file` (no YAML frontmatter):
+Write **body only** (no YAML frontmatter) to `~/.okf/temp/<concept-id>.md` and pass it as `--body-file`. Never use `%TEMP%` or other system temp dirs: `~/.okf/` is where Notebook chat lets edits through without a card.
+
+**Cleanup:** delete the temp body file only after the script reported `Wrote <id> -> <path>` with `<path>` under the intended KS root **and** `okf check` passed. On failure keep it so the ingest can be fixed and re-run.
+
+Body content:
 
 - `# Title` matching `--title`
 - Optional **See also** with **Intra-KS** relative links only
@@ -104,6 +108,7 @@ Write **body only** to `--body-file` (no YAML frontmatter):
 | Cross-KS paths in See also      | `okf associate --source ingest`                    |
 | Ingest to workspace parent      | Use KS root from `okf.yaml`                        |
 | Skip `okf check`                | Always check Separation + frontmatter              |
+| Body file in `%TEMP%`           | `~/.okf/temp/<concept-id>.md`, deleted after check |
 | Treat `.okf` as source of truth | Per-KS `index.md` + concept markdown are canonical |
 
 ## References
