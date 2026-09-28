@@ -65,7 +65,6 @@ def test_generated_viz_includes_actions_ui(tmp_path: Path):
     assert ">Actions<" in html
     assert 'id="actions-dialog"' in html
     assert 'id="actions-cmd"' in html
-    assert 'id="actions-copy"' in html
     assert '--workspace "${workspace}" viz' in html
     assert "const okfCli = " in html
     assert "__OKF_CLI__" not in html
@@ -123,7 +122,6 @@ def test_generated_viz_includes_chat_action_row(tmp_path: Path):
 
     assert '<div class="actions-group">Serve (chat, live actions)</div>' in html
     assert 'id="actions-chat-cmd"' in html
-    assert 'id="actions-chat-copy"' in html
     assert '--workspace "${workspace}" serve' in html
 
 
@@ -137,7 +135,6 @@ def test_generated_viz_includes_offboard_row_per_ks(tmp_path: Path):
     assert "offboard personal" in html
     assert "offboard work" in html
     assert html.count('class="offboard-cmd"') == 2
-    assert html.count('class="offboard-copy"') == 2
     assert html.count('class="offboard-live"') == 2
     assert 'data-ks="work"' in html
     assert 'data-ks="personal"' in html

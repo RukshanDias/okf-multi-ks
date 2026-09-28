@@ -29,6 +29,7 @@ function normPath(p) {
   if (!chatFrag) return;
   const panel = document.getElementById("chat-panel");
   const messages = document.getElementById("chat-messages");
+  const emptyHint = document.getElementById("chat-empty");
   const form = document.getElementById("chat-form");
   const input = document.getElementById("chat-input");
   const sendBtn = document.getElementById("chat-send");
@@ -36,6 +37,12 @@ function normPath(p) {
   const statusEl = document.getElementById("chat-status");
   const chip = document.getElementById("chat-chip");
   const chipLabel = document.getElementById("chat-chip-label");
+  const skillSel = document.getElementById("chat-skill");
+  const syncPlaceholder = () => {
+    input.placeholder = skillSel.selectedOptions[0].dataset.placeholder;
+  };
+  skillSel.addEventListener("change", syncPlaceholder);
+  syncPlaceholder();
 
   const toggle = document.getElementById("chat-toggle");
   toggle.hidden = false;
@@ -112,6 +119,7 @@ function normPath(p) {
     });
   }
   function addMsg(cls) {
+    if (emptyHint) emptyHint.hidden = true;
     const div = document.createElement("div");
     div.className = `chat-msg ${cls}`;
     messages.appendChild(div);
@@ -242,7 +250,7 @@ function normPath(p) {
     if (!text || sendBtn.disabled) return;
     // Skill invoke: the slash command must lead the prompt, so the selection
     // context trails the message instead of preceding it.
-    let promptText = `/${document.getElementById("chat-skill").value} ${text}`;
+    let promptText = `/${skillSel.value} ${text}`;
     if (context) {
       promptText +=
         `\n\nContext: the user has concept ${context.id} ("${context.label}") ` +

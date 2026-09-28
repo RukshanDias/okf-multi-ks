@@ -35,7 +35,6 @@ function printBanner() {
     const [r, g, b] = lerp(FROM, TO, art.length > 1 ? i / (art.length - 1) : 0);
     console.log('  ' + rgb(r, g, b, line));
   });
-  console.log('  ' + dim('by ') + bold(rgb(TO[0], TO[1], TO[2], 'RUDI')));
   console.log('');
 }
 

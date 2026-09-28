@@ -118,20 +118,7 @@ let chatSelect = null; // set by initChat when OKF Server is present
 // concatenated after this file) and the live Actions buttons below.
 const chatFrag = /[#&]chat=(\d+):([A-Za-z0-9_~.-]+)/.exec(location.hash);
 
-// Actions: copy-only commands (ADR-0003, amended: paths injected at generation)
-function copyText(text) {
-  if (navigator.clipboard && window.isSecureContext) {
-    return navigator.clipboard.writeText(text);
-  }
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand("copy");
-  ta.remove();
-  return Promise.resolve();
-}
-
+// Actions: commands shown for manual copy (ADR-0003, amended: paths injected at generation)
 const actionsBtn = document.getElementById("actions");
 const actionsDialog = document.getElementById("actions-dialog");
 const actionsCmd = document.getElementById("actions-cmd");
@@ -148,17 +135,6 @@ if (workspace && actionsBtn && actionsDialog && actionsCmd) {
     document.getElementById("actions-chat-cmd").textContent = chatCmd;
     actionsDialog.showModal();
   });
-  document.getElementById("actions-copy").addEventListener("click", () => {
-    copyText(cmd);
-  });
-  document.getElementById("actions-chat-copy").addEventListener("click", () => {
-    copyText(chatCmd);
-  });
-  for (const btn of actionsDialog.querySelectorAll(".offboard-copy")) {
-    btn.addEventListener("click", () => {
-      copyText(btn.previousElementSibling.textContent);
-    });
-  }
 
   // OKF Server (ADR-0008): action routes are live, token-gated, in-process —
   // no copy/paste. Inert without chatFrag (static file:// viewing).

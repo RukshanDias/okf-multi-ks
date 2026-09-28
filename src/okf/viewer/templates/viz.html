@@ -48,13 +48,11 @@
   <div class="actions-group">Re-generate</div>
   <div class="actions-row">
     <code id="actions-cmd"></code>
-    <button type="button" id="actions-copy">Copy</button>
     <button type="button" id="actions-regenerate-live" hidden>Regenerate now</button>
   </div>
   <div class="actions-group">Serve (chat, live actions)</div>
   <div class="actions-row">
     <code id="actions-chat-cmd"></code>
-    <button type="button" id="actions-chat-copy">Copy</button>
   </div>
   <!--__OKF_OFFBOARD_ROWS__-->
   <form method="dialog"><button>Close</button></form>
@@ -97,21 +95,25 @@
       <strong>Notebook chat</strong>
       <span class="muted" id="chat-status">connecting…</span>
     </header>
-    <div id="chat-messages"></div>
+    <div id="chat-messages">
+      <div id="chat-empty" class="muted">This chat connects to Claude through the ACP connection. Ask a question about your notebook to get started.</div>
+    </div>
     <form id="chat-form">
       <div class="chat-tools">
         <div id="chat-chip" class="chat-chip" hidden>
           <span id="chat-chip-label"></span>
           <button type="button" id="chat-chip-remove" title="Drop concept context">×</button>
         </div>
-        <select id="chat-skill" title="Skill to invoke with each message">
-          <option value="okf-reader">okf-reader</option>
-          <option value="okf-ingest">okf-ingest</option>
-          <option value="okf-onboard">okf-onboard</option>
-        </select>
+        <label class="chat-skill-label">Skill:
+          <select id="chat-skill" title="Skill to invoke with each message">
+            <option value="okf-reader" data-placeholder="okf-reader is used to read and answer questions about your notebook.">okf-reader</option>
+            <option value="okf-ingest" data-placeholder="okf-ingest is used to add knowledge (text or a URL) to a Knowledge System.">okf-ingest</option>
+            <option value="okf-onboard" data-placeholder="okf-onboard is used to register a cloned Knowledge System into this notebook.">okf-onboard</option>
+          </select>
+        </label>
       </div>
       <div class="chat-input-row">
-        <textarea id="chat-input" rows="2" placeholder="Ask about your notebook…" disabled></textarea>
+        <textarea id="chat-input" rows="3" disabled></textarea>
         <button type="submit" id="chat-send" disabled>Send</button>
         <button type="button" id="chat-cancel" hidden>Stop</button>
       </div>

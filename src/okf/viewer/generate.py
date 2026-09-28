@@ -47,7 +47,6 @@ def _offboard_rows(okf_cli: str, labels: list[str]) -> str:
             '<div class="actions-row">'
             f'<span class="offboard-ks">{safe_label}</span>'
             f'<code class="offboard-cmd">{cmd}</code>'
-            '<button type="button" class="offboard-copy">Copy</button>'
             f'<button type="button" class="offboard-live" data-ks="{safe_label}" hidden>Off-board now</button>'
             "</div>"
         )

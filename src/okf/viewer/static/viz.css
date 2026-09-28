@@ -181,6 +181,13 @@ main {
   flex-direction: column;
   gap: 8px;
 }
+#chat-empty {
+  margin: auto;
+  padding: 0 16px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .chat-msg { font-size: 13px; line-height: 1.5; max-width: 100%; overflow-wrap: break-word; }
 .chat-msg.user {
   align-self: flex-end;
@@ -213,8 +220,8 @@ main {
   padding: 2px 8px;
 }
 .chat-tools { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.chat-skill-label { margin-left: auto; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
 #chat-skill {
-  margin-left: auto;
   font-size: 12px;
   padding: 2px 6px;
   border: 1px solid var(--border-strong);

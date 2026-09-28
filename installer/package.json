@@ -1,6 +1,6 @@
 {
   "name": "okf-multi-ks",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Bootstrapper for the OKF Multi-KS system: preflights prerequisites, clones the repo, and runs install.sh.",
   "bin": {
     "okf-multi-ks": "bin/okf-multi-ks.js"
