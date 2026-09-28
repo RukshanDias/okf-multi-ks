@@ -4,6 +4,27 @@
 // static file (ADR-0003). The WebSocket connects as soon as the page loads;
 // the ACP handshake (and the agent subprocess it requires) is deferred to
 // the first message the user actually sends (ADR-0008).
+
+// Read trail: map the absolute paths the agent reads (ACP tool_call
+// locations) back to node ids. bundle.sourceDirs already carries each
+// concept's directory as a file:// URI; the file name is the id's tail.
+function pathIndex(sourceDirs, ids) {
+  const index = {};
+  for (const id of ids) {
+    const dir = sourceDirs[id];
+    if (!dir) continue;
+    const rel = id.slice(id.indexOf(":") + 1); // "<ks>:<rel/path.md>"
+    const file = rel.slice(rel.lastIndexOf("/") + 1);
+    index[normPath(decodeURIComponent(new URL(dir).pathname) + file)] = id;
+  }
+  return index;
+}
+// Both sides lowercased: Windows is case-insensitive and the agent may spell
+// the drive letter either way. yagni: case-sensitive FS collisions ignored.
+function normPath(p) {
+  return p.replace(/\\/g, "/").replace(/^\/(?=[a-z]:\/)/i, "").toLowerCase();
+}
+
 (function initChat() {
   if (!chatFrag) return;
   const panel = document.getElementById("chat-panel");
@@ -61,6 +82,25 @@
   // Shell tools put the raw command in `title` and a model-written summary in
   // rawInput.description ("Remove the temp file"); show the summary.
   const describe = (tc) => (tc && tc.rawInput && tc.rawInput.description) || "";
+
+  // Read trail (PoC): light up each node as the agent reads it; the camera
+  // moves once, when the answer lands. Only the 3D renderer has highlight().
+  let pathToId = null;
+  let readIds = new Set();
+  function trail(u) {
+    const paths = (u.locations || []).map((l) => l && l.path);
+    if (u.rawInput && u.rawInput.file_path) paths.push(u.rawInput.file_path);
+    pathToId ||= pathIndex(bundle.sourceDirs || {}, Object.keys(nodeIndex));
+    let grew = false;
+    for (const p of paths) {
+      const id = p && pathToId[normPath(p)];
+      if (id && !readIds.has(id)) {
+        readIds.add(id);
+        grew = true;
+      }
+    }
+    if (grew && renderer.highlight) renderer.highlight(readIds);
+  }
 
   function setStatus(text) { statusEl.textContent = text; }
   function jsonSend(obj) { ws.send(JSON.stringify(obj)); }
@@ -163,6 +203,7 @@
       const title = describe(u) || u.title || el.dataset.title || "tool";
       el.dataset.title = title;
       el.textContent = `⚙ ${title}${u.status ? ` — ${u.status}` : ""}`;
+      trail(u);
       // A tool call ends the current message bubble; the next chunk starts fresh.
       agentEl = null;
       agentBuf = "";
@@ -213,6 +254,8 @@
     agentBuf = "";
     sendBtn.disabled = true;
     cancelBtn.hidden = false;
+    readIds = new Set(); // new question, fresh trail
+    if (renderer.highlight) renderer.highlight(readIds);
     try {
       await ensureSession(); // first message only: spawns the agent (ADR-0008)
       setStatus("thinking…");
@@ -223,6 +266,7 @@
     } catch (err) {
       addMsg("error").textContent = err.message;
     }
+    if (renderer.highlight) renderer.highlight(readIds, true); // answer landed: fly once
     agentEl = null;
     agentBuf = "";
     sendBtn.disabled = false;

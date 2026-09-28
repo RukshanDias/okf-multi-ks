@@ -1,5 +1,6 @@
 // Shared state, filters, and the View-mode switch. Renderers implement the
 // ADR-0007 contract: { mount, unmount, focusNode(id|null), applyDim(Set), reset }.
+// Optional: highlight(Set, fly) — chat read trail; 3D only so far, callers guard.
 const bundle = window.BUNDLE;
 const bundleName = window.BUNDLE_NAME;
 document.title = `${bundleName} — OKF Viewer`;
@@ -104,6 +105,7 @@ document.getElementById("reset").addEventListener("click", () => {
 
 function clearSelection() {
   selectedId = null;
+  if (renderer.highlight) renderer.highlight(new Set()); // background click / Reset drops the chat read trail
   renderer.focusNode(null);
   document.getElementById("detail-empty").hidden = false;
   document.getElementById("detail-content").hidden = true;

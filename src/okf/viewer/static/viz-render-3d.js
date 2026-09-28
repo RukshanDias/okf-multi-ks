@@ -69,6 +69,15 @@ function create3dRenderer() {
     return div.innerHTML;
   }
 
+  // Read trail: nodes the chat agent read for the current question
+  // (viz-chat.js). Trail nodes get the bright selection halo; while a trail
+  // is active everything else drops to greyscale so the trail reads at a glance.
+  let hot = new Set();
+  const idOf = (end) => (typeof end === "object" ? end.id : end);
+  const FADED = "#3b4252";
+  // 2 = edge between two trail nodes (highlight), 1 = context edge (normal), 0 = faded.
+  const litEnds = (l) => (hot.has(idOf(l.source)) ? 1 : 0) + (hot.has(idOf(l.target)) ? 1 : 0);
+
   let graph;
   try {
     // orbit controls: the default trackball has no autoRotate for the ambient spin
@@ -79,18 +88,22 @@ function create3dRenderer() {
       .nodeThreeObject((n) => {
         const group = new THREE.Group();
         const r = n.size / 8;
+        const selected = n.id === selectedId;
+        const lit = selected || hot.has(n.id);
+        const faded = hot.size > 0 && !lit;
         group.add(
           new THREE.Mesh(
             new THREE.SphereGeometry(r, 16, 16),
-            new THREE.MeshBasicMaterial({ color: n.color })
+            new THREE.MeshBasicMaterial({ color: faded ? FADED : n.color })
           )
         );
-        const selected = n.id === selectedId;
-        const halo = new THREE.Sprite(haloMaterial(n.color, selected));
-        const haloScale = r * (selected ? 9 : 6);
+        if (faded) return group; // greyscale: no glow either
+        const halo = new THREE.Sprite(haloMaterial(n.color, lit));
+        const haloScale = r * (lit ? 9 : 6);
         halo.scale.set(haloScale, haloScale, 1);
+        halo.raycast = () => {}; // glow is decoration: hover/click hit the sphere only
         group.add(halo);
-        if (selected) {
+        if (lit) {
           const label = textSprite(n.label);
           label.position.set(0, r * 2.5, 0);
           group.add(label);
@@ -98,8 +111,13 @@ function create3dRenderer() {
         return group;
       })
       // Intra-KS lighter/more visible; Cross-KS fainter (grill 2026-09-09).
-      .linkColor((l) => (l.kind === "association" ? "#3d4a5c" : "#94a3b8"))
-      .linkWidth(0.65) // >0 renders cylinders: gives edges visible weight
+      .linkColor((l) => {
+        const ends = hot.size ? litEnds(l) : 1;
+        if (ends === 2) return "#f8fafc";
+        if (ends === 0) return "#1a2030";
+        return l.kind === "association" ? "#3d4a5c" : "#94a3b8";
+      })
+      .linkWidth((l) => (hot.size && litEnds(l) === 2 ? 2 : 0.65)) // >0 renders cylinders: gives edges visible weight
       .linkOpacity(0.5)
       .onNodeClick((n) => showDetail(n.id))
       .onBackgroundClick(() => clearSelection())
@@ -181,6 +199,10 @@ function create3dRenderer() {
   controls.addEventListener("start", () => {
     controls.autoRotate = false;
     clearTimeout(resumeTimer);
+    if (hot.size) {
+      hot = new Set(); // any touch on the graph surface reverts the read trail
+      graph.refresh();
+    }
   });
   controls.addEventListener("end", () => {
     clearTimeout(resumeTimer);
@@ -188,8 +210,6 @@ function create3dRenderer() {
       controls.autoRotate = true;
     }, 10000);
   });
-
-  const idOf = (end) => (typeof end === "object" ? end.id : end);
 
   return {
     mount() {
@@ -225,6 +245,38 @@ function create3dRenderer() {
         .linkVisibility(
           (l) => !dimSet.has(idOf(l.source)) && !dimSet.has(idOf(l.target))
         );
+    },
+    highlight(ids, fly = false) {
+      hot = ids;
+      graph.refresh(); // re-evaluates nodeThreeObject so halos follow `hot`
+      if (!fly || !ids.size) return;
+      // Camera moves once, when the answer lands — never per read. The
+      // ambient spin stops so the trail stays centred; the next click/drag on
+      // the graph re-arms it via the controls "end" handler above.
+      controls.autoRotate = false;
+      clearTimeout(resumeTimer);
+      // Close-up on the trail's centroid along the current viewing direction
+      // (no swing). zoomToFit is useless here: two near nodes give a bbox so
+      // small it barely moves the camera.
+      const pts = graph.graphData().nodes.filter((n) => ids.has(n.id));
+      if (!pts.length) return;
+      const c = { x: 0, y: 0, z: 0 };
+      for (const p of pts) {
+        c.x += p.x / pts.length;
+        c.y += p.y / pts.length;
+        c.z += p.z / pts.length;
+      }
+      let span = 0;
+      for (const p of pts) span = Math.max(span, Math.hypot(p.x - c.x, p.y - c.y, p.z - c.z));
+      const cam = graph.cameraPosition();
+      const d = { x: cam.x - c.x, y: cam.y - c.y, z: cam.z - c.z };
+      const len = Math.hypot(d.x, d.y, d.z) || 1;
+      const dist = Math.max(120, span * 3); // yagni: eyeballed for readable labels; tune if they overlap
+      graph.cameraPosition(
+        { x: c.x + (d.x / len) * dist, y: c.y + (d.y / len) * dist, z: c.z + (d.z / len) * dist },
+        c,
+        800
+      );
     },
     reset() {
       graph.zoomToFit(400);
