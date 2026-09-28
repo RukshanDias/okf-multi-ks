@@ -441,16 +441,18 @@ def write_roots(workspace_root: Path) -> list[Path]:
 
 
 def _edits_inside(locations: list | None, roots: list[Path]) -> bool:
-    """True when every edited path is absolute, under a root, and outside
-    _GUARDED_DIRS. No locations -> False (unknown target goes to the human)."""
-    paths = [loc.get("path") for loc in locations or [] if isinstance(loc, dict)]
-    if not paths:
+    """True when every edited path is absolute, under a root, outside
+    _GUARDED_DIRS, and not okf.yaml (it defines these roots; the human must
+    approve allowlist changes). Fails closed: no locations or any malformed
+    entry -> False (unknown target goes to the human)."""
+    if not isinstance(locations, list) or not locations:
         return False
-    for raw in paths:
-        if not raw or not Path(raw).is_absolute():
+    for loc in locations:
+        raw = loc.get("path") if isinstance(loc, dict) else None
+        if not isinstance(raw, str) or not Path(raw).is_absolute():
             return False
         path = Path(raw).resolve()
-        if _GUARDED_DIRS & {p.lower() for p in path.parts}:
+        if path.name == "okf.yaml" or _GUARDED_DIRS & {p.lower() for p in path.parts}:
             return False
         if not any(path.is_relative_to(root) for root in roots):
             return False

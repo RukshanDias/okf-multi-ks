@@ -179,13 +179,17 @@ def test_route_permission_auto_allows_edits_inside_write_roots(tmp_path):
 
     assert edit(tmp_path / "tmp" / "body.md") == allowed  # notebook
     assert edit(lib / "new-clone" / "x.md") == allowed  # KS library, not yet onboarded
-    assert edit(lib / "kairos" / "a.md", tmp_path / "okf.yaml") == allowed
-    # Outside, mixed, guarded, relative, or unknown target -> card.
+    # Outside, mixed, guarded, relative, malformed, or unknown target -> card.
+    assert edit(lib / "kairos" / "a.md", tmp_path / "okf.yaml") is None  # allowlist source
     assert edit(tmp_path.parent / "elsewhere.md") is None
     assert edit(lib / "kairos" / "a.md", tmp_path.parent / "elsewhere.md") is None
     assert edit(tmp_path / ".claude" / "settings.local.json") is None
     assert edit(lib / "kairos" / ".git" / "hooks" / "pre-commit") is None
     assert edit("tmp/body.md") is None
+    for bad in ({}, {"path": 5}, "not-a-dict"):
+        req = _perm_request("edit")
+        req["toolCall"]["locations"] = [{"path": str(tmp_path / "tmp" / "body.md")}, bad]
+        assert route_permission(req, roots) is None
     assert route_permission(_perm_request("edit"), roots) is None
 
 
